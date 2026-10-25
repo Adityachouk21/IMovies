@@ -34,10 +34,37 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Allowed origins & origin validator
+const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+  // Allow requests with no origin (curl, mobile apps, Postman, server-to-server)
+  if (!origin) return true;
+
+  if (allowedOrigins.includes(origin)) return true;
+
+  // In development, allow localhost, 127.0.0.1, and local private network IPs (e.g. 192.168.x.x, 10.x.x.x) on any port
+  if (NODE_ENV !== 'production') {
+    if (
+      /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+      /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+      /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
+      /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/.test(origin)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 // Socket.io initialization
 const io = new SocketIOServer(server, {
   cors: {
-    origin: [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin));
+    },
     credentials: true,
     methods: ['GET', 'POST']
   }
@@ -66,19 +93,22 @@ app.use(helmet({
 }));
 
 // CORS Configuration
-const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean);
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS blocked origin: ${origin}`));
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Set-Cookie']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Body & Cookie Parsers
 app.use(express.json({ limit: '10mb' }));
