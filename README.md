@@ -4,6 +4,15 @@ A modern, production-oriented movie ticket booking web application built with **
 
 ---
 
+## 🌐 Live Production Deployment
+
+* 🚀 **Web Application (Vercel)**: **[https://imovies-frontend-xi.vercel.app](https://imovies-frontend-xi.vercel.app)**
+* ⚙️ **Backend API (Render)**: **[https://imovies-backend-c2bf.onrender.com](https://imovies-backend-c2bf.onrender.com)**
+* 📡 **API Health Status**: **[https://imovies-backend-c2bf.onrender.com/api/health](https://imovies-backend-c2bf.onrender.com/api/health)**
+* 🗄️ **Database**: **MongoDB Atlas Cloud Cluster**
+
+---
+
 ## 🎬 Architecture Overview
 
 ```

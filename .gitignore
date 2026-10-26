@@ -41,6 +41,8 @@ coverage/
 # ==============================================================================
 .vite/
 */.vite/
+.vercel/
+*/.vercel/
 .turbo/
 .parcel-cache/
 .eslintcache
