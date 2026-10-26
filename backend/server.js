@@ -29,28 +29,56 @@ import { ApiResponse } from './utils/ApiResponse.js';
 const app = express();
 const server = http.createServer(app);
 
+// Enable trust proxy for secure cookies and rate-limiting behind Render/Vercel/Cloudflare reverse proxies
+app.set('trust proxy', 1);
+
 // Configuration constants
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Allowed origins & origin validator
-const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'].filter(Boolean);
+// Parse and normalize configured allowed origins (strip trailing slashes, handle comma-separated values)
+const parseAllowedOrigins = () => {
+  const customOrigins = (CLIENT_URL || '')
+    .split(',')
+    .map(url => url.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
+  return Array.from(new Set([
+    ...customOrigins,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000'
+  ]));
+};
+
+const allowedOrigins = parseAllowedOrigins();
 
 const isOriginAllowed = (origin) => {
   // Allow requests with no origin (curl, mobile apps, Postman, server-to-server)
   if (!origin) return true;
 
-  if (allowedOrigins.includes(origin)) return true;
+  const normalizedOrigin = origin.replace(/\/$/, '');
 
-  // In development, allow localhost, 127.0.0.1, and local private network IPs (e.g. 192.168.x.x, 10.x.x.x) on any port
+  // Exact match from allowed list
+  if (allowedOrigins.includes(normalizedOrigin)) return true;
+
+  // Allow Vercel and Render cloud deployments (*.vercel.app, *.onrender.com)
+  if (
+    /^https?:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/.test(normalizedOrigin) ||
+    /^https?:\/\/([a-zA-Z0-9-]+\.)*onrender\.com$/.test(normalizedOrigin)
+  ) {
+    return true;
+  }
+
+  // In development, allow localhost, 127.0.0.1, and local private network IPs
   if (NODE_ENV !== 'production') {
     if (
-      /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
-      /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
-      /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
-      /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
-      /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/.test(origin)
+      /^https?:\/\/localhost(:\d+)?$/.test(normalizedOrigin) ||
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(normalizedOrigin) ||
+      /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(normalizedOrigin) ||
+      /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(normalizedOrigin) ||
+      /^https?:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+(:\d+)?$/.test(normalizedOrigin)
     ) {
       return true;
     }
