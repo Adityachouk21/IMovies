@@ -18,6 +18,12 @@ export default function TrailerModal({ show, onHide, trailerUrl, movieTitle }) {
         const id = url.split('youtu.be/')[1]?.split('?')[0];
         return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`;
       }
+      if (url.includes('drive.google.com')) {
+        const fileId = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1] || url.match(/[?&]id=([a-zA-Z0-9_-]+)/)?.[1];
+        if (fileId) {
+          return `https://drive.google.com/file/d/${fileId}/preview`;
+        }
+      }
       return url;
     } catch {
       return url;
