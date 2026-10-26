@@ -66,6 +66,25 @@ export const connectDB = async () => {
     console.info(`ℹ️ [Database Notice] Backend server will continue running with high-performance in-memory fallback.\n`);
     isConnected = false;
 
+    // Schedule background retry every 15s until connected
+    if (!global._mongoRetryTimer) {
+      global._mongoRetryTimer = setInterval(async () => {
+        if (!isConnected && mongoose.connection.readyState === 0) {
+          console.log('[Database Retry] Attempting reconnection to MongoDB Atlas...');
+          try {
+            await connectDB();
+            if (isConnected) {
+              clearInterval(global._mongoRetryTimer);
+              global._mongoRetryTimer = null;
+              console.log('✅ [Database Retry] Successfully reconnected to MongoDB Atlas!');
+            }
+          } catch (err) {
+            // Keep retrying in background
+          }
+        }
+      }, 15000);
+    }
+
     if (process.env.NODE_ENV === 'production' && process.env.STRICT_DB === 'true') {
       throw error;
     }
